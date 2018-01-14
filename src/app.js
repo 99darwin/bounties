@@ -16,7 +16,7 @@ const abi = require('./divx.js');
 if (typeof web3 !== 'undefined') {
     web3 = new Web3(web3.currentProvider);
 } else {
-    web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+    web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8546'));
 };
 
 // global variables
@@ -25,12 +25,13 @@ const e = web3.eth;
 const defaultAccount = e.defaultAccount = e.accounts[0];
 console.log(`default account: ${defaultAccount}`);
 let nonceCount = e.getTransactionCount(defaultAccount);
-console.log(`nonce for default account: ${count}`);
+console.log(`nonce for default account: ${nonceCount}`);
 let gasLimit = web3.toHex(100000);
 let gasPrice = web3.toHex(21000000000);
 const contractAddress = '0x13f11C9905A08ca76e3e853bE63D4f0944326C72';
 const contract = web3.eth.contract(abi).at(contractAddress);
 const privateKey = new Buffer(keys.privateKey, 'hex');
+const testPrivateKey = new Buffer(keys.testPrivateKey, 'hex');
 
 // payment functions
 const bountyPay = () => {
@@ -51,16 +52,23 @@ const bountyPay = () => {
             let bountyArr = [];
             let addressArr = [];
             for (let i = 0; i < addresses.length; i++) {
-                let payoutAmount = Math.round(addresses[i].amount / price * ethMultiplier, 15);
+                let payoutAmount = Math.round(addresses[i].amount / price * weiMultiplier, 15);
                 let payoutRound = new BigNumber(payoutAmount, 10);
+                bountyArr.push(payoutRound);
                 claimants = addresses[i].address;
                 addressArr.push(claimants);
+                console.log(`Claimant: ${addressArr[i]}`);
+                console.log(`Payout: ${bountyArr[i]}`);
             }
-
             const sendDivx = () => {
-                const amountToSend = bountyArr[j];
-                const addressToSend = addressArr[j];
-                for (let j = 0; j < bountyArr.length; j++) {
+                let amountToSend;
+                let addressToSend;
+                console.log(`Number of bounties to pay: ${addressArr.length}`);
+                for (let j = 0; j < addressArr.length; j++) {
+                    amountToSend = bountyArr[j];
+                    console.log(`Amount sending: ${amountToSend}`);
+                    addressToSend = addresses[j].address;
+                    console.log(`Address sending to: ${addressToSend}`)
                     const bountyTx = {
                         nonce: nonceCount,
                         to: addressArr[j],
@@ -71,7 +79,8 @@ const bountyPay = () => {
                     }
                     nonceCount++;
                     const tx = new Tx(bountyTx);
-                    tx.sign(privateKey);
+                    // tx.sign(privateKey);
+                    tx.sign(testPrivateKey);
                     const serializedTx = tx.serialize();
                     e.sendRawTransaction(`0x ${serializedTx.toString('hex')}`, function(err, hash) {
                         if (!err) {
@@ -88,3 +97,4 @@ const bountyPay = () => {
             console.log(err);
         });
 }
+bountyPay();
